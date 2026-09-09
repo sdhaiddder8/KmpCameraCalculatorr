@@ -25,6 +25,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
+/**
+ * Turns a shared [PhotoReference] (just a file path) into an actual on-screen image.
+ * This decode step is exactly the platform-specific work the shared code refuses to do.
+ *
+ * The bitmap is decoded off the main thread and stored in local Compose state; until it's
+ * ready a "Loading photo…" placeholder shows. Keying `remember`/`LaunchedEffect` on
+ * `reference.filePath` means a new photo triggers a fresh decode and the old bitmap is
+ * dropped.
+ */
 @Composable
 fun PhotoPreview(reference: PhotoReference, modifier: Modifier = Modifier) {
     var bitmap by remember(reference.filePath) { mutableStateOf<Bitmap?>(null) }
@@ -45,12 +54,22 @@ fun PhotoPreview(reference: PhotoReference, modifier: Modifier = Modifier) {
     } ?: Text("Loading photo…")
 }
 
+/**
+ * Decode a JPEG to a right-side-up, memory-safe [Bitmap].
+ *
+ *  - Downsample: reads the header first (`inJustDecodeBounds`) and picks a power-of-two
+ *    `inSampleSize` so the loaded bitmap never exceeds [maxSize] on either edge — a
+ *    full-res camera photo would otherwise risk an OutOfMemoryError.
+ *  - Rotate: camera photos are often stored landscape with an EXIF "orientation" tag
+ *    instead of physically rotated pixels. We read that tag and rotate the bitmap so it
+ *    displays the way it was shot.
+ */
 private fun decode(path: String, maxSize: Int = 1600): Bitmap? {
     val file = File(path)
     if (!file.exists() || file.length() == 0L) return null
 
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeFile(path, bounds)
+    BitmapFactory.decodeFile(path, bounds) // fills bounds.outWidth/outHeight, allocates nothing
     if (bounds.outWidth <= 0) return null
 
     var sample = 1
@@ -65,7 +84,7 @@ private fun decode(path: String, maxSize: Int = 1600): Bitmap? {
         ExifInterface.ORIENTATION_ROTATE_90 -> 90f
         ExifInterface.ORIENTATION_ROTATE_180 -> 180f
         ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-        else -> return bitmap
+        else -> return bitmap // already upright (or unknown) — nothing to do
     }
     return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, Matrix().apply { postRotate(degrees) }, true)
 }

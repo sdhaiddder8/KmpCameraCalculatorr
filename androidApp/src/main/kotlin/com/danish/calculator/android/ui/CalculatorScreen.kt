@@ -47,6 +47,8 @@ import com.danish.calculator.mvi.CalculatorEffect
 import com.danish.calculator.mvi.CalculatorIntent
 import kotlinx.coroutines.flow.Flow
 
+// Palette pulled out as constants so the same blue/grey is reused everywhere. The SwiftUI
+// screen defines the identical RGB values — the two UIs are kept visually in sync by hand.
 private val Primary = Color(0xFF2E6BE6)
 private val ErrorRed = Color(0xFFD22F2F)
 private val BorderGray = Color(0xFFC6C6C8)
@@ -56,6 +58,14 @@ private val TitleColor = Color(0xFF1A1A1A)
 private val FieldShape = RoundedCornerShape(12.dp)
 private val FieldHeight = 52.dp
 
+/**
+ * The entire Android UI. A pure function of [state]: it only reads state and emits
+ * [CalculatorIntent]s via [onIntent] — it never holds calculator state itself.
+ *
+ * @param effects hot stream of one-shot effects from the store
+ * @param camera  platform camera, invoked when a [CalculatorEffect.LaunchCamera] arrives
+ * @param onIntent the store's `dispatch`
+ */
 @Composable
 fun CalculatorScreen(
     state: CalculatorState,
@@ -64,6 +74,9 @@ fun CalculatorScreen(
     onIntent: (CalculatorIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Bridge effects -> platform work. Keyed on effects/camera so it restarts only if
+    // those identities change, not on every recomposition. This is the Android equivalent
+    // of what CalculatorComponent.init does for iOS.
     LaunchedEffect(effects, camera) {
         effects.collect { effect ->
             when (effect) {
@@ -77,7 +90,7 @@ fun CalculatorScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color.White)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()) // keyboard can push content off-screen
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
@@ -89,6 +102,8 @@ fun CalculatorScreen(
             modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
         )
 
+        // Each field: shows the raw string from state, and every keystroke dispatches a
+        // *Changed intent. There is no local mutable text state — state is the only truth.
         LabeledField("First number", state.firstNumberError) {
             TextInput(state.firstNumber) { onIntent(CalculatorIntent.FirstNumberChanged(it)) }
         }
@@ -107,6 +122,7 @@ fun CalculatorScreen(
             }
         }
 
+        // Button label is derived from state, not tracked separately.
         SecondaryButton(if (state.hasPhoto) "Retake photo" else "Open camera") {
             onIntent(CalculatorIntent.OpenCameraClicked)
         }
@@ -116,6 +132,7 @@ fun CalculatorScreen(
     }
 }
 
+/** Label + field + optional error message, the repeated vertical unit of the form. */
 @Composable
 private fun LabeledField(label: String, error: String?, field: @Composable () -> Unit) {
     Column {
@@ -129,6 +146,7 @@ private fun LabeledField(label: String, error: String?, field: @Composable () ->
     }
 }
 
+/** The rounded, bordered box shared by the text inputs, the dropdown and the result. */
 @Composable
 private fun FieldBox(
     fill: Color = Color.White,
@@ -153,15 +171,18 @@ private fun TextInput(value: String, onValueChange: (String) -> Unit) {
             singleLine = true,
             textStyle = TextStyle(fontSize = 17.sp, color = Color.Black),
             cursorBrush = SolidColor(Primary),
+            // Decimal keypad is only a hint — validation still fully parses the text,
+            // because hardware keyboards / paste can produce anything.
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
+/** Tap-to-open dropdown of the four operations; iterates the shared `MathOperation.entries`. */
 @Composable
 private fun OperationField(selected: MathOperation?, onSelect: (MathOperation) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) } // pure UI state, fine to keep local
     Box {
         FieldBox(onClick = { expanded = true }) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -209,6 +230,12 @@ private fun SecondaryButton(text: String, onClick: () -> Unit) {
     ) { Text(text, color = Primary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) }
 }
 
+/**
+ * The preview area below the button. Shows, in priority order:
+ *  - the photo (current or the one being kept while the camera is open) via [displayPhoto]
+ *  - a "opening camera" hint while launching
+ *  - an empty-state message otherwise
+ */
 @Composable
 private fun PhotoArea(state: CalculatorState) {
     Box(
@@ -227,6 +254,10 @@ private fun PhotoArea(state: CalculatorState) {
     }
 }
 
+/**
+ * The long human label for the dropdown. This mapping is per-platform on purpose — it's
+ * the only user-facing string not shared — while the glyph comes from the shared enum.
+ */
 private fun MathOperation.display(): String {
     val name = when (this) {
         MathOperation.ADD -> "Addition"

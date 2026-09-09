@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- KMP Calculator + Camera | Author: Danish Hussain -->
+<!-- Minimal app theme: light, no action bar. All real styling is done in Compose
+     (CalculatorScreen.kt), so this only needs to set a sane window background/chrome. -->
 <resources>
     <style name="Theme.KmpCalculator" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

@@ -3,6 +3,18 @@
 
 package com.danish.calculator.validation
 
+/**
+ * Every user-facing error string, in one place.
+ *
+ * Why centralise them:
+ *  - The reducer produces these strings, so tests assert against these constants rather
+ *    than hard-coded literals (`assertEquals(CalculatorErrors.DIVISION_BY_ZERO, ...)`).
+ *  - Both platforms show the identical wording with zero duplication.
+ *
+ * Trade-off: this app keeps the text here for simplicity. A localised app would return
+ * error *keys* from shared code and resolve them to `strings.xml` / `Localizable.strings`
+ * in each UI instead.
+ */
 object CalculatorErrors {
     const val FIRST_NUMBER_REQUIRED = "First number is required"
     const val SECOND_NUMBER_REQUIRED = "Second number is required"

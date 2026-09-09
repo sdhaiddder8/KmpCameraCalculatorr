@@ -13,8 +13,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/**
+ * The camera flow, verified purely at the state/effect level (no real camera):
+ * one LaunchCamera per tap, each result intent mapped correctly, the previous photo kept
+ * on cancel/failure, and old files released when a photo is replaced.
+ */
 class CameraFlowTest {
 
+    /** OpenCameraClicked must produce exactly one LaunchCamera effect and enter Launching. */
     @Test
     fun openCameraEmitsExactlyOneLaunchEffect() = runTest {
         val store = newStore()
@@ -26,6 +32,7 @@ class CameraFlowTest {
         assertTrue(store.state.value.isCameraLaunching)
     }
 
+    /** A successful capture shows the photo and clears any prior camera error. */
     @Test
     fun capturedResultShowsPhotoAndClearsError() = runTest {
         val store = newStore()
@@ -36,6 +43,7 @@ class CameraFlowTest {
         assertNull(store.state.value.cameraError)
     }
 
+    /** Cancelling with a photo already present keeps that photo and shows no false error. */
     @Test
     fun cancelKeepsPreviousPhotoAndShowsNoError() = runTest {
         val store = newStore()
@@ -48,6 +56,7 @@ class CameraFlowTest {
         assertNull(store.state.value.cameraError)
     }
 
+    /** Cancelling with no previous photo returns to the empty state, not an error. */
     @Test
     fun cancelWithNoPreviousPhotoGoesBackToEmpty() = runTest {
         val store = newStore()
@@ -86,6 +95,7 @@ class CameraFlowTest {
         assertEquals(CalculatorErrors.CAPTURE_FAILED, store.state.value.cameraError)
     }
 
+    /** New photo at a different path -> ReleasePhoto(old) so the platform deletes the old file. */
     @Test
     fun replacingPhotoReleasesTheOldFile() = runTest {
         val store = newStore()

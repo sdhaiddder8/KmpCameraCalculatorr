@@ -11,8 +11,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/**
+ * State-machine rules that aren't arithmetic: each input intent lands in state, editing an
+ * input clears the stale result and that field's error, changing the operation clears the
+ * result, and none of the calculator inputs disturb a captured photo.
+ */
 class MviStateTest {
 
+    /** Every input intent is reflected in the corresponding state field. */
     @Test
     fun stateReflectsEachInputIntent() {
         val store = newStore()
@@ -27,6 +33,7 @@ class MviStateTest {
         assertEquals(MathOperation.MULTIPLY, store.state.value.selectedOperation)
     }
 
+    /** Editing an input clears its old error AND the now-stale result. */
     @Test
     fun changingInputClearsResultAndOldError() {
         val store = newStore()
@@ -42,9 +49,10 @@ class MviStateTest {
         assertEquals("5", store.state.value.result)
 
         store.dispatch(CalculatorIntent.FirstNumberChanged("11"))
-        assertNull(store.state.value.result)
+        assertNull(store.state.value.result) // stale result gone after another edit
     }
 
+    /** Changing the operation also invalidates the previous result. */
     @Test
     fun changingOperationClearsResult() {
         val store = newStore()
@@ -56,6 +64,7 @@ class MviStateTest {
         assertNull(store.state.value.result)
     }
 
+    /** The photo is independent of the calculator: editing inputs / calculating keeps it. */
     @Test
     fun changingInputsDoesNotClearThePhoto() {
         val store = newStore()

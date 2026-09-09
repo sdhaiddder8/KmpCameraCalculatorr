@@ -10,8 +10,14 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
+/**
+ * Arithmetic + validation, driven through the real store (enter inputs -> CalculateClicked
+ * -> inspect the resulting state). Covers the four operations, negatives, decimals,
+ * whitespace trimming, every validation message, divide-by-zero (incl. "-0"), and overflow.
+ */
 class CalculatorLogicTest {
 
+    /** enter the three inputs, press Calculate, return the final state to assert on. */
     private fun calculate(first: String, second: String, op: MathOperation?) = newStore().apply {
         enter(first, second, op)
         dispatch(CalculatorIntent.CalculateClicked)
@@ -29,12 +35,12 @@ class CalculatorLogicTest {
     @Test
     fun subtraction() {
         assertEquals("6", calculate("10", "4", MathOperation.SUBTRACT).result)
-        assertEquals("-2", calculate("4", "6", MathOperation.SUBTRACT).result)
+        assertEquals("-2", calculate("4", "6", MathOperation.SUBTRACT).result) // negative result
     }
 
     @Test
     fun multiplicationWithNegativeNumber() {
-        assertEquals("-6", calculate("3", "-2", MathOperation.MULTIPLY).result)
+        assertEquals("-6", calculate("3", "-2", MathOperation.MULTIPLY).result) // negative input
     }
 
     @Test
@@ -42,6 +48,7 @@ class CalculatorLogicTest {
         assertEquals("3.5", calculate("7", "2", MathOperation.DIVIDE).result)
     }
 
+    /** Validation behaviour: surrounding spaces are trimmed, decimals are accepted. */
     @Test
     fun trimsWhitespaceAndSupportsDecimals() {
         assertEquals("4", calculate("  1.5 ", "2.5", MathOperation.ADD).result)
@@ -71,11 +78,13 @@ class CalculatorLogicTest {
 
     @Test
     fun divisionByZero() {
+        // Reported on secondNumberError (it's an input problem), and "-0" must trip it too.
         assertEquals(CalculatorErrors.DIVISION_BY_ZERO, calculate("10", "0", MathOperation.DIVIDE).secondNumberError)
         assertEquals(CalculatorErrors.DIVISION_BY_ZERO, calculate("10", "-0", MathOperation.DIVIDE).secondNumberError)
         assertNull(calculate("10", "0", MathOperation.DIVIDE).result)
     }
 
+    /** All three field errors must appear from a single Calculate press, not one at a time. */
     @Test
     fun allInvalidFieldsReportedTogether() {
         val state = calculate("", "x", null)
@@ -84,6 +93,7 @@ class CalculatorLogicTest {
         assertEquals(CalculatorErrors.NO_OPERATION_SELECTED, state.operationError)
     }
 
+    /** Result that overflows the chosen representation -> "Result is too large", no result. */
     @Test
     fun resultTooLargeIsRejected() {
         val state = calculate("9999999999", "9999999999", MathOperation.MULTIPLY)

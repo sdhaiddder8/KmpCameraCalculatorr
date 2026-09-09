@@ -2,7 +2,11 @@
 <!-- KMP Calculator + Camera | Author: Danish Hussain -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- ACTION_IMAGE_CAPTURE doesn't strictly require this, but declaring + requesting it
+         at runtime is what makes the "Camera permission is required" path real and testable. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- required=false: the app still installs on a camera-less device; availability is
+         checked at runtime (FEATURE_CAMERA_ANY) and surfaces as "Camera is not available". -->
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <application
@@ -14,13 +18,16 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize"><!-- resize so the keyboard doesn't cover fields -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
+        <!-- FileProvider hands the camera app a writable content:// URI for our cache file.
+             A raw file:// path would throw FileUriExposedException on modern Android.
+             The authority string here must match uriFor() in CameraLauncher.kt. -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

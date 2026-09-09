@@ -4,6 +4,8 @@
 import SwiftUI
 import Shared
 
+// Brand palette. These RGB values match the Android `CalculatorScreen` constants exactly —
+// the two native UIs are kept in visual sync by hand, not by shared code.
 private extension Color {
     static let brandPrimary = Color(red: 46 / 255, green: 107 / 255, blue: 230 / 255)
     static let brandError = Color(red: 210 / 255, green: 47 / 255, blue: 47 / 255)
@@ -16,12 +18,19 @@ private extension Color {
 private let fieldShape = RoundedRectangle(cornerRadius: 12, style: .continuous)
 private let fieldHeight: CGFloat = 52
 
+/// The entire iOS UI. Like the Android screen, it is a pure function of `store.state` and
+/// only communicates back by dispatching intents — no local calculator state.
+///
+/// Kotlin intent classes appear here with their flattened Swift names, e.g.
+/// `CalculatorIntent.FirstNumberChanged` -> `CalculatorIntentFirstNumberChanged`.
 struct ContentView: View {
+    // @StateObject: created once and kept for the view's lifetime. It builds and owns the
+    // shared CalculatorComponent.
     @StateObject private var store = CalculatorViewStore()
 
     var body: some View {
         let state = store.state
-        ScrollView {
+        ScrollView {   // keyboard can cover the lower fields
             VStack(alignment: .leading, spacing: 18) {
                 Text("Calculator")
                     .font(.system(size: 32, weight: .bold))
@@ -29,6 +38,7 @@ struct ContentView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 2)
 
+                // Each field renders state.<x> and dispatches a *Changed intent on edit.
                 LabeledField(label: "First number", error: state.firstNumberError) {
                     TextInput(value: state.firstNumber) {
                         store.dispatch(CalculatorIntentFirstNumberChanged(value: $0))
@@ -69,8 +79,11 @@ struct ContentView: View {
         }
         .background(Color.white)
     }
+    // Note: unlike Android, there is no "collect effects" code in the view. The shared
+    // CalculatorComponent already runs the camera when a LaunchCamera effect is emitted.
 }
 
+/// Label + field + optional error — the repeated form row (mirrors Android's LabeledField).
 private struct LabeledField<Content: View>: View {
     let label: String
     let error: String?
@@ -87,6 +100,7 @@ private struct LabeledField<Content: View>: View {
     }
 }
 
+/// Rounded bordered container shared by inputs, dropdown and result box.
 private struct FieldBox<Content: View>: View {
     var fill: Color = .white
     @ViewBuilder var content: Content
@@ -108,9 +122,11 @@ private struct TextInput: View {
 
     var body: some View {
         FieldBox {
+            // Binding.get returns the state value, Binding.set forwards to onChange — the
+            // text field never stores its own copy of the string.
             TextField("", text: Binding(get: { value }, set: onChange))
                 .font(.system(size: 17))
-                .keyboardType(.numbersAndPunctuation)
+                .keyboardType(.numbersAndPunctuation) // hint only; shared validator still parses
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
         }
@@ -123,6 +139,7 @@ private struct OperationField: View {
 
     var body: some View {
         Menu {
+            // MathOperation.entries comes straight from the shared Kotlin enum.
             ForEach(MathOperation.entries, id: \.self) { op in
                 Button(op.display()) { onSelect(op) }
             }
@@ -174,6 +191,7 @@ private struct SecondaryButton: View {
     }
 }
 
+/// Preview area: photo (current or kept-while-launching), a launching hint, or empty state.
 private struct PhotoArea: View {
     let state: CalculatorState
 
@@ -196,6 +214,9 @@ private struct PhotoArea: View {
     }
 }
 
+/// Long human label for the dropdown (per-platform, like Android's `display()`); the glyph
+/// in parentheses is the shared `symbol`. The `default` case is required because the
+/// Obj-C-imported enum isn't seen as exhaustive by Swift.
 private extension MathOperation {
     func display() -> String {
         let name: String

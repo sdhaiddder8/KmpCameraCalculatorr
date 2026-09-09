@@ -30,5 +30,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "KmpCameraCalculator"
 
-include(":shared")
-include(":androidApp")
+// Only two Gradle modules. iosApp is an Xcode project, not a Gradle module — it consumes
+// :shared's framework via the "Compile Kotlin Framework" build phase (see iosApp/project.rb).
+include(":shared")     // the KMP logic library
+include(":androidApp") // the Android (Jetpack Compose) app, depends on :shared

@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+<!-- KMP Calculator + Camera | Author: Danish Hussain
+     Hand-written (GENERATE_INFOPLIST_FILE = NO in project.rb). Most values are build-setting
+     variables; the one that matters for behaviour is NSCameraUsageDescription below —
+     without it iOS kills the app when IosCameraController requests camera access. -->
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>

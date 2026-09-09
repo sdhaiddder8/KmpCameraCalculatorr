@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- KMP Calculator + Camera | Author: Danish Hussain -->
+<!-- Whitelist for the FileProvider declared in AndroidManifest.xml: it may only share
+     files under cacheDir/photos/ — exactly where CameraLauncher.kt writes captures. -->
 <paths>
     <cache-path name="captured_photos" path="photos/" />
 </paths>
